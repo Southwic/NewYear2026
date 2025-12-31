@@ -8,7 +8,6 @@
     html, body {
       height: 100%;
       margin: 0;
-      padding: 0;
       font-family: Verdana, Geneva, Tahoma, sans-serif;
       background: #000000;
       overflow: hidden;
@@ -19,30 +18,30 @@
       position: fixed;
       inset: 0;
       display: block;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
     }
 
     p {
       margin: 0;
       position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: 20px;
+      left: 12px;
+      bottom: 12px;
       color: #ffdca8;
-      font-size: 11px;
-      text-align: center;
-      width: 100%;
-      text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+      font-size: 14px;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.6);
       z-index: 10;
     }
     p a {
       color: #fff3d9;
       text-decoration: none;
       font-weight: 700;
-      display: block;
-      font-size: 14px;
-      margin-bottom: 4px;
+    }
+    p span { 
+      font-size: 12px; 
+      color: #ffdca8; 
+      opacity: 0.9; 
+      margin-left: 8px; 
     }
   </style>
 </head>
@@ -51,7 +50,7 @@
 
   <p>
     <a href="#" target="_blank">Happy New Year 2026 ✨</a>
-    <span>By Louis Dang • Made with ❤️</span>
+    <span>• By Louis Dang || Made with ❤️</span>
   </p>
 
   <script>
@@ -67,13 +66,13 @@
       gravity: 0.12,
       upFlow: -0.06,
       fireworkPrevPoints: 12,
-      fireworkBaseLineWidth: 4,
-      fireworkAddedLineWidth: 4,
+      fireworkBaseLineWidth: 6,
+      fireworkAddedLineWidth: 8,
       fireworkSpawnTime: 140,
       fireworkBaseReachTime: 36,
       fireworkAddedReachTime: 40,
-      fireworkCircleBaseSize: 20,
-      fireworkCircleAddedSize: 10,
+      fireworkCircleBaseSize: 22,
+      fireworkCircleAddedSize: 14,
       fireworkCircleBaseTime: 36,
       fireworkCircleAddedTime: 26,
       fireworkCircleFadeBaseTime: 12,
@@ -89,17 +88,16 @@
       balloonSpawnTime: 18,
       balloonBaseInflateTime: 12,
       balloonAddedInflateTime: 18,
-      balloonBaseSize: 15,
-      balloonAddedSize: 20,
+      balloonBaseSize: 18,
+      balloonAddedSize: 24,
       balloonBaseVel: 0.36,
       balloonAddedVel: 0.5,
       balloonBaseRadian: -(Math.PI / 2 - 0.4),
       balloonAddedRadian: -0.9
     };
 
-    let DPR = Math.max(window.devicePixelRatio || 1, 1);
-    let w, h, hw, hh;
-    let globalScale = 1; // Used to fit text on mobile
+    let DPR, w, h, hw, hh;
+    let letterScale = 1; // The "Zoom" factor for letters
     let calc = { totalWidth: 0 };
     const Tau = Math.PI * 2;
     const letters = [];
@@ -108,35 +106,38 @@
       DPR = Math.max(window.devicePixelRatio || 1, 1);
       w = window.innerWidth;
       h = window.innerHeight;
-      
-      canvas.width = Math.round(w * DPR);
-      canvas.height = Math.round(h * DPR);
-      
-      hw = w / 2; 
+      hw = w / 2;
       hh = h / 2;
 
-      // Calculate if we need to scale the text to fit the width
+      canvas.width = Math.round(w * DPR);
+      canvas.height = Math.round(h * DPR);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(DPR, DPR);
+
+      // --- CALCULATE FIT ---
       const longest = Math.max(...opts.strings.map(s => s.length));
-      const neededWidth = longest * opts.charSpacing;
-      
-      // If screen is smaller than text, set a global scale for the letters
-      if (w < neededWidth + 20) {
-        globalScale = (w - 20) / neededWidth;
+      const fullWidth = longest * opts.charSpacing;
+      // If the text is wider than 90% of the screen, scale it down
+      if (fullWidth > w * 0.9) {
+        letterScale = (w * 0.9) / fullWidth;
       } else {
-        globalScale = 1;
+        letterScale = 1;
       }
+      // --------------------
+
+      ctx.font = `${opts.charSize * letterScale}px Verdana`;
     }
 
     function hueForX(x) {
-      const fullW = (calc.totalWidth || 1);
-      const t = (x + fullW/2) / fullW;
+      if (calc.totalWidth <= 0) return 40;
+      const t = (x + calc.totalWidth/2) / calc.totalWidth;
       return 30 + 25 * Math.min(Math.max(t, 0), 1);
     }
 
     function Letter(char, x, y) {
       this.char = char;
-      this.x = x;
-      this.y = y;
+      this.x = x; // Target X relative to center
+      this.y = y; // Target Y relative to center
       this.reset();
     }
 
@@ -146,35 +147,37 @@
       this.spawned = false;
       this.spawningTime = Math.floor(opts.fireworkSpawnTime * Math.random());
       this.reachTime = Math.floor(opts.fireworkBaseReachTime + opts.fireworkAddedReachTime * Math.random());
-      this.lineWidth = opts.fireworkBaseLineWidth + opts.fireworkAddedLineWidth * Math.random();
-      this.prevPoints = [[0, hh, 0]];
+      this.lineWidth = (opts.fireworkBaseLineWidth + opts.fireworkAddedLineWidth * Math.random()) * letterScale;
+      this.prevPoints = [[0, 0, 0]]; // Start from center (0,0 in translated context)
       
-      // Recalculate colors/metrics based on current globalScale
       const hue = hueForX(this.x);
       this.color = `hsl(${hue},90%,50%)`;
       this.lightColor = (l) => `hsl(${hue},90%,${l}%)`;
       this.alphaColor = (a) => `hsla(${hue},90%,52%,${a})`;
       this.lightAlpha = (l, a) => `hsla(${hue},90%,${l}%,${a})`;
       
-      ctx.font = `${opts.charSize * globalScale}px Verdana`;
+      ctx.font = `${opts.charSize * letterScale}px Verdana`;
       this.dx = -ctx.measureText(this.char).width / 2;
-      this.dy = (opts.charSize * globalScale) / 2;
+      this.dy = (opts.charSize * letterScale) / 2;
     };
 
     Letter.prototype.step = function () {
-      const s = globalScale;
+      const targetX = this.x * letterScale;
+      const targetY = this.y * letterScale;
+
       if (this.phase === 'firework') {
         if (!this.spawned) {
           if (++this.tick >= this.spawningTime) { this.tick = 0; this.spawned = true; }
         } else {
           ++this.tick;
-          const lp = this.tick / Math.max(1, this.reachTime);
-          const x = lp * this.x * s;
-          const y = hh + Math.sin(lp * (Tau/4)) * (this.y * s - hh);
-          
+          const lp = this.tick / this.reachTime;
+          const ap = Math.sin(lp * (Tau/4));
+          const curX = lp * targetX;
+          const curY = ap * targetY;
+
           if (this.prevPoints.length > opts.fireworkPrevPoints) this.prevPoints.shift();
-          this.prevPoints.push([x, y, lp * this.lineWidth * s]);
-          
+          this.prevPoints.push([curX, curY, lp * this.lineWidth]);
+
           for (let i = 1; i < this.prevPoints.length; ++i) {
             ctx.strokeStyle = this.alphaColor((i / this.prevPoints.length) * 0.9);
             ctx.lineWidth = this.prevPoints[i][2];
@@ -183,64 +186,67 @@
             ctx.lineTo(this.prevPoints[i-1][0], this.prevPoints[i-1][1]);
             ctx.stroke();
           }
+
           if (this.tick >= this.reachTime) {
             this.phase = 'contemplate';
-            this.tick = 0; this.tick2 = 0;
-            this.circleCreating = true;
+            this.tick = 0;
             this.shards = [];
             const shardCount = Math.floor(opts.fireworkBaseShards + opts.fireworkAddedShards * Math.random());
             for (let i = 0; i < shardCount; i++) {
               const ang = (Tau / shardCount) * i;
-              this.shards.push(new Shard(this.x * s, this.y * s, Math.cos(ang), Math.sin(ang), this.alphaColor(1)));
+              this.shards.push(new Shard(targetX, targetY, Math.cos(ang), Math.sin(ang), this.alphaColor(1)));
             }
           }
         }
       } else if (this.phase === 'contemplate') {
-        ctx.font = `${opts.charSize * s}px Verdana`;
+        ctx.font = `${opts.charSize * letterScale}px Verdana`;
         ctx.save();
-        ctx.shadowBlur = 10 * s;
+        ctx.shadowBlur = 10 * letterScale;
         ctx.shadowColor = 'rgba(255,190,80,0.85)';
         ctx.fillStyle = this.lightColor(72);
-        ctx.fillText(this.char, this.x * s + this.dx, this.y * s + this.dy);
+        ctx.fillText(this.char, targetX + this.dx, targetY + this.dy);
         ctx.restore();
-        
+
         for (let i = 0; i < this.shards.length; i++) {
           this.shards[i].step();
           if (!this.shards[i].alive) this.shards.splice(i--, 1);
         }
+
         if (++this.tick > opts.letterContemplatingWaitTime) {
           this.phase = 'balloon';
-          this.tick = 0; this.spawning = true;
-          this.size = (opts.balloonBaseSize + opts.balloonAddedSize * Math.random()) * s;
-          this.cx = this.x * s; this.cy = this.y * s;
+          this.tick = 0;
+          this.cx = targetX; this.cy = targetY;
+          this.bSize = (opts.balloonBaseSize + opts.balloonAddedSize * Math.random()) * letterScale;
           const rad = opts.balloonBaseRadian + opts.balloonAddedRadian * Math.random();
-          const vel = (opts.balloonBaseVel + opts.balloonAddedVel * Math.random()) * s;
-          this.vx = Math.cos(rad) * vel; this.vy = Math.sin(rad) * vel;
+          const vel = (opts.balloonBaseVel + opts.balloonAddedVel * Math.random()) * letterScale;
+          this.vx = Math.cos(rad) * vel;
+          this.vy = Math.sin(rad) * vel;
         }
       } else if (this.phase === 'balloon') {
-        this.cx += this.vx; this.cy += (this.vy += opts.upFlow * s);
+        this.cx += this.vx; this.cy += (this.vy += opts.upFlow * letterScale);
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        generateBalloonPath(ctx, this.cx, this.cy, this.size);
+        generateBalloonPath(ctx, this.cx, this.cy, this.bSize);
         ctx.fill();
         ctx.fillStyle = this.lightColor(76);
-        ctx.fillText(this.char, this.cx + this.dx, this.cy + this.dy + this.size);
-        if (this.cy + this.size < -100) this.phase = 'done';
+        ctx.fillText(this.char, this.cx + this.dx, this.cy + this.dy + this.bSize);
+        if (this.cy + this.bSize < -hh - 100) this.phase = 'done';
       }
     };
 
     function Shard(x, y, vx, vy, color) {
-      const vel = (opts.fireworkShardBaseVel + opts.fireworkShardAddedVel * Math.random()) * globalScale;
+      const vel = (opts.fireworkShardBaseVel + opts.fireworkShardAddedVel * Math.random()) * letterScale;
       this.vx = vx * vel; this.vy = vy * vel;
       this.x = x; this.y = y;
-      this.color = color; this.alive = true;
-      this.size = (opts.fireworkShardBaseSize + opts.fireworkShardAddedSize * Math.random()) * globalScale;
+      this.color = color;
+      this.alive = true;
+      this.size = (opts.fireworkShardBaseSize + opts.fireworkShardAddedSize * Math.random()) * letterScale;
     }
     Shard.prototype.step = function() {
-      this.x += this.vx; this.y += this.vy += opts.gravity * globalScale;
+      this.x += this.vx; this.y += this.vy += opts.gravity * letterScale;
       ctx.fillStyle = this.color;
       ctx.fillRect(this.x, this.y, this.size, this.size);
-      if (this.y > h) this.alive = false;
+      if (this.y > hh + 100) this.alive = false;
     };
 
     function generateBalloonPath(ctx, x, y, size) {
@@ -251,14 +257,16 @@
 
     function createLetters() {
       letters.length = 0;
+      const rows = opts.strings.length;
       const longest = Math.max(...opts.strings.map(s => s.length));
       calc.totalWidth = opts.charSpacing * longest;
+      
       opts.strings.forEach((str, i) => {
         const rowW = opts.charSpacing * str.length;
         const xOff = -rowW / 2 + opts.charSpacing / 2;
-        const y = hh + (i - (opts.strings.length - 1) / 2) * opts.lineHeight;
+        const y = (i - (rows - 1) / 2) * opts.lineHeight;
         for (let j = 0; j < str.length; j++) {
-          letters.push(new Letter(str[j], xOff + j * opts.charSpacing, y / (globalScale || 1)));
+          letters.push(new Letter(str[j], xOff + j * opts.charSpacing, y));
         }
       });
     }
@@ -268,8 +276,15 @@
       ctx.fillStyle = 'rgba(0,0,0,0.15)';
       ctx.fillRect(0, 0, w, h);
 
+      // Radial Glow
+      const g = ctx.createRadialGradient(hw, hh, 0, hw, hh, Math.max(w,h)*0.8);
+      g.addColorStop(0, 'rgba(255,190,80,0.05)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+
       ctx.save();
-      ctx.translate(hw, 0); // Center horizontally
+      ctx.translate(hw, hh);
       let allDone = true;
       letters.forEach(l => {
         l.step();
@@ -278,13 +293,13 @@
       ctx.restore();
 
       if (allDone) {
-        setTimeout(() => letters.forEach(l => l.reset()), 600);
+        setTimeout(() => letters.forEach(l => l.reset()), 400);
       }
       requestAnimationFrame(animate);
     }
 
-    window.addEventListener('resize', () => { setSize(); createLetters(); });
     setSize();
+    window.addEventListener('resize', () => { setSize(); createLetters(); });
     createLetters();
     animate();
   })();
