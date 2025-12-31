@@ -2,47 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>Happy New Year 2026</title>
   <style>
-    /* full-page black background + canvas */
     html, body {
       height: 100%;
       margin: 0;
+      padding: 0;
       font-family: Verdana, Geneva, Tahoma, sans-serif;
-      background: #000000; /* pure black */
+      background: #000000;
       overflow: hidden;
+      touch-action: none; /* Prevents accidental zooming on mobile */
     }
 
-    /* canvas fills viewport */
     canvas {
       position: fixed;
       inset: 0;
       display: block;
-      width: 110%;
-      height: 110%;
+      width: 100vw;
+      height: 100vh;
     }
 
-    /* small footer/credit */
+    /* Adjusted footer for better mobile visibility */
     p {
       margin: 0;
       position: absolute;
-      left: 12px;
-      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 20px;
       color: #ffdca8;
-      font-size: 14px;
-      text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+      font-size: 11px;
+      text-align: center;
+      width: 100%;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+      z-index: 10;
     }
     p a {
       color: #fff3d9;
       text-decoration: none;
       font-weight: 700;
-    }
-    p span { 
-      font-size: 12px; 
-      color: #ffdca8; 
-      opacity: 0.9; 
-      margin-left: 8px; 
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
     }
   </style>
 </head>
@@ -51,30 +52,31 @@
 
   <p>
     <a href="#" target="_blank">Happy New Year 2026 ✨</a>
-    <span>• By Louis Dang || Made with ❤️</span>
+    <span>By Louis Dang • Made with ❤️</span>
   </p>
 
   <script>
   (function () {
     const canvas = document.getElementById('c');
-    if (!canvas) throw new Error("Canvas element with id 'c' not found.");
     const ctx = canvas.getContext('2d');
 
     const opts = {
       strings: ["HAPPY NEW YEAR", "2026 ✨"],
+      // These will now be calculated dynamically
       charSize: 44,
       charSpacing: 62,
       lineHeight: 72,
+      
       gravity: 0.12,
       upFlow: -0.06,
       fireworkPrevPoints: 12,
-      fireworkBaseLineWidth: 6,
-      fireworkAddedLineWidth: 8,
+      fireworkBaseLineWidth: 4,
+      fireworkAddedLineWidth: 4,
       fireworkSpawnTime: 140,
       fireworkBaseReachTime: 36,
       fireworkAddedReachTime: 40,
-      fireworkCircleBaseSize: 22,
-      fireworkCircleAddedSize: 14,
+      fireworkCircleBaseSize: 20,
+      fireworkCircleAddedSize: 10,
       fireworkCircleBaseTime: 36,
       fireworkCircleAddedTime: 26,
       fireworkCircleFadeBaseTime: 12,
@@ -90,8 +92,8 @@
       balloonSpawnTime: 18,
       balloonBaseInflateTime: 12,
       balloonAddedInflateTime: 18,
-      balloonBaseSize: 18,
-      balloonAddedSize: 24,
+      balloonBaseSize: 15,
+      balloonAddedSize: 20,
       balloonBaseVel: 0.36,
       balloonAddedVel: 0.5,
       balloonBaseRadian: -(Math.PI / 2 - 0.4),
@@ -99,22 +101,35 @@
     };
 
     let DPR = Math.max(window.devicePixelRatio || 1, 1);
-    let w = innerWidth, h = innerHeight, hw = w/2, hh = h/2;
+    let w, h, hw, hh;
     let calc = { totalWidth: 0 };
     const Tau = Math.PI * 2;
     const letters = [];
 
     function setSize() {
       DPR = Math.max(window.devicePixelRatio || 1, 1);
-      const cssW = Math.max(1, innerWidth);
-      const cssH = Math.max(1, innerHeight);
-      canvas.style.width = cssW + 'px';
-      canvas.style.height = cssH + 'px';
-      canvas.width = Math.round(cssW * DPR);
-      canvas.height = Math.round(cssH * DPR);
+      w = window.innerWidth;
+      h = window.innerHeight;
+      
+      // --- MOBILE RESPONSIVE LOGIC ---
+      // If screen is narrow (mobile), scale down the font and spacing
+      let mobileScale = w < 500 ? (w / 500) * 1.2 : 1; 
+      if (mobileScale > 1) mobileScale = 1;
+
+      opts.charSize = Math.floor(44 * mobileScale);
+      opts.charSpacing = Math.floor(62 * mobileScale);
+      opts.lineHeight = Math.floor(72 * mobileScale);
+      // -------------------------------
+
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      canvas.width = Math.round(w * DPR);
+      canvas.height = Math.round(h * DPR);
+      
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(DPR, DPR);
-      w = cssW; h = cssH; hw = w/2; hh = h/2;
+      
+      hw = w/2; hh = h/2;
       ctx.font = `${opts.charSize}px Verdana`;
       calc.totalWidth = opts.charSpacing * Math.max(...opts.strings.map(s => s.length));
     }
@@ -342,16 +357,16 @@
       window.requestAnimationFrame(animate);
       ctx.save();
       ctx.setTransform(DPR,0,0,DPR,0,0);
-      ctx.clearRect(0,0,canvas.width, canvas.height);
+      ctx.clearRect(0,0,w, h);
       ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, canvas.width / DPR, canvas.height / DPR);
+      ctx.fillRect(0, 0, w, h);
 
       const g = ctx.createRadialGradient(hw, hh, 0, hw, hh, Math.max(w,h)*0.9);
       g.addColorStop(0, 'rgba(255,190,80,0.06)');
       g.addColorStop(0.25, 'rgba(255,160,60,0.03)');
       g.addColorStop(1, 'rgba(0,0,0,0.6)');
       ctx.fillStyle = g;
-      ctx.fillRect(0,0,canvas.width / DPR, canvas.height / DPR);
+      ctx.fillRect(0,0,w, h);
       ctx.restore();
 
       ctx.save();
@@ -369,13 +384,18 @@
       ctx.restore();
 
       if (allDone) {
-        setTimeout(() => { for (let L of letters) L.reset(); }, 400);
+        setTimeout(() => { 
+          if(letters.every(l => l.phase === 'done')) {
+            for (let L of letters) L.reset(); 
+          }
+        }, 600);
       }
     }
 
     setSize();
     window.addEventListener('resize', () => {
-      window.requestAnimationFrame(() => { setSize(); createLetters(); });
+      setSize(); 
+      createLetters();
     }, { passive: true });
 
     createLetters();
